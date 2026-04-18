@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#1D4ED8"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="VPSP Check"/>
+<title>VPSP Check — FFSS</title>
+<link rel="manifest" href="/manifest.json"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --blue:#1D4ED8;--blue-dark:#1e3a8a;--blue-light:#dbeafe;--blue-mid:#3b82f6;
+  --red:#dc2626;--red-light:#fee2e2;--green:#16a34a;--green-light:#dcfce7;
+  --amber:#d97706;--amber-light:#fef3c7;--grey:#64748b;--grey-light:#f1f5f9;
+  --grey-border:#e2e8f0;--dark:#0f172a;--white:#fff;
+  --r:12px;--rs:8px;--sh:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:-apple-system,'SF Pro Display','Segoe UI',sans-serif;background:#f8fafc;color:var(--dark);overscroll-behavior:none}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;background:#f8fafc}
+
+/* TOPBAR */
+.topbar{background:var(--blue);padding:calc(var(--sat) + 12px) 16px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(29,78,216,.25)}
+.topbar-logo{width:36px;height:36px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.topbar-logo span{font-weight:800;font-size:11px;color:var(--blue);letter-spacing:-.5px;line-height:1.1;text-align:center}
+.topbar-info{flex:1}
+.topbar-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.topbar-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:1px}
+.topbar-prog{font-size:12px;font-weight:600;color:#fff;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;flex-shrink:0}
+.prog-strip{height:3px;background:rgba(29,78,216,.15)}
+.prog-fill{height:3px;background:linear-gradient(90deg,#60a5fa,#34d399);transition:width .4s ease}
+
+/* SCROLL */
+.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 calc(var(--sab) + 80px)}
+
+/* SCREENS */
+.screen{display:none}.screen.active{display:block}
+
+/* SETUP */
+.setup-hero{background:var(--blue);padding:24px 20px 32px}
+.setup-hero h2{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.setup-hero p{font-size:13px;color:rgba(255,255,255,.75);margin-top:4px}
+.setup-card{background:#fff;border-radius:var(--r) var(--r) 0 0;margin-top:-16px;padding:20px 16px}
+.fg{margin-bottom:14px}
+.fg label{font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px}
+.fg input,.fg select{width:100%;padding:12px 14px;font-size:15px;border:1.5px solid var(--grey-border);border-radius:var(--rs);background:var(--grey-light);color:var(--dark);outline:none;transition:border-color .15s;appearance:none}
+.fg input:focus,.fg select:focus{border-color:var(--blue);background:#fff}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-start{width:100%;padding:16px;background:var(--blue);color:#fff;border:none;border-radius:var(--r);font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;letter-spacing:-.3px;box-shadow:0 4px 14px rgba(29,78,216,.35);transition:transform .1s}
+.btn-start:active{transform:scale(.98)}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--grey)}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+
+/* CHAPTER */
+.ch-item{background:#fff;margin:8px 12px 0;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.ch-item:first-child{margin-top:12px}
+.ch-hdr{display:flex;align-items:center;padding:14px;gap:12px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.ch-hdr:active{background:var(--grey-light)}
+.ch-code{width:36px;height:36px;border-radius:8px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ch-code span{font-size:11px;font-weight:800;color:var(--blue)}
+.ch-info{flex:1}
+.ch-title{font-size:14px;font-weight:700;color:var(--dark)}
+.ch-count{font-size:11px;color:var(--grey);margin-top:2px}
+.ch-right{display:flex;align-items:center;gap:6px}
+.ch-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px}
+.b-ok{background:var(--green-light);color:var(--green)}
+.b-miss{background:var(--red-light);color:var(--red)}
+.ch-arr{color:var(--grey);font-size:12px;transition:transform .2s;flex-shrink:0}
+.ch-arr.open{transform:rotate(90deg)}
+.ch-body{display:none;border-top:1px solid var(--grey-border)}
+.ch-body.open{display:block}
+
+/* ITEM */
+.itw{border-bottom:1px solid var(--grey-border)}
+.itw:last-child{border-bottom:none}
+.itr{display:flex;align-items:center;padding:10px 14px;gap:10px}
+.it-ref{font-size:10px;font-family:'SF Mono',monospace;color:var(--grey);width:42px;flex-shrink:0}
+.it-txt{flex:1}
+.it-name{font-size:13px;color:var(--dark);line-height:1.35}
+.it-name.opt{color:var(--grey);font-style:italic}
+.it-qty{font-size:10px;color:var(--grey);margin-top:2px}
+.ck-row{display:flex;gap:4px;flex-shrink:0}
+.ck{width:38px;height:32px;border-radius:6px;border:1.5px solid var(--grey-border);background:var(--grey-light);font-size:10px;font-weight:700;color:var(--grey);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.ck:active{transform:scale(.92)}
+.ck.ok.active{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.ck.na.active{background:var(--amber-light);border-color:var(--amber);color:var(--amber)}
+.ck.miss.active{background:var(--red-light);border-color:var(--red);color:var(--red)}
+.obs-row{padding:0 14px 10px 60px;display:none}
+.obs-row.show{display:block}
+.obs-inp{width:100%;padding:8px 10px;font-size:12px;border:1px solid var(--grey-border);border-radius:6px;background:var(--grey-light);color:var(--dark);outline:none}
+.obs-inp:focus{border-color:var(--blue);background:#fff}
+
+/* BILAN */
+.bil-hero{background:var(--blue);padding:24px 20px 40px;text-align:center}
+.bil-hero h2{font-size:20px;font-weight:800;color:#fff}
+.bil-hero p{font-size:12px;color:rgba(255,255,255,.7);margin-top:4px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:-20px 12px 0}
+.stat-card{background:#fff;border-radius:var(--r);padding:14px 10px;text-align:center;box-shadow:var(--sh)}
+.stat-num{font-size:28px;font-weight:800;letter-spacing:-1px}
+.stat-lbl{font-size:10px;font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.s-ok .stat-num,.s-ok .stat-lbl{color:var(--green)}
+.s-na .stat-num,.s-na .stat-lbl{color:var(--amber)}
+.s-miss .stat-num,.s-miss .stat-lbl{color:var(--red)}
+.bil-sec{margin:20px 12px 0}
+.bil-sec h3{font-size:11px;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-left:4px}
+.miss-list{background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.miss-item{padding:10px 14px;border-bottom:1px solid var(--grey-border);display:flex;gap:10px;align-items:flex-start}
+.miss-item:last-child{border-bottom:none}
+.miss-ref{font-size:10px;font-family:monospace;color:var(--red);font-weight:700;min-width:44px;margin-top:1px}
+.miss-name{font-size:13px;color:var(--dark);flex:1}
+.miss-obs{font-size:11px;color:var(--grey);margin-top:2px;font-style:italic}
+.obs-gbox{background:#fff;border-radius:var(--r);box-shadow:var(--sh)}
+.obs-gbox textarea{width:100%;padding:14px;font-size:14px;border:none;outline:none;border-radius:var(--r);resize:none;min-height:80px;color:var(--dark);background:#fff}
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sig-box{background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.sig-lbl{font-size:11px;font-weight:600;color:var(--grey);padding:10px 12px 6px;border-bottom:1px solid var(--grey-border);display:flex;justify-content:space-between;align-items:center}
+.sig-clr{font-size:10px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0}
+.sig-cv{display:block;width:100%;height:80px;cursor:crosshair;touch-action:none}
+.act-btns{display:flex;flex-direction:column;gap:10px;margin:20px 12px 0}
+.btn-act{width:100%;padding:16px;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;letter-spacing:-.3px;transition:transform .1s,opacity .1s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-act:active{transform:scale(.98);opacity:.9}
+.btn-pdf{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(29,78,216,.3)}
+.btn-save{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(22,163,74,.25)}
+.btn-email{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-reset{background:var(--grey-light);color:var(--grey)}
+.all-ok{background:var(--green-light);border-radius:var(--r);padding:16px;text-align:center;margin-bottom:12px}
+.all-ok .emo{font-size:32px}
+.all-ok p{font-size:14px;font-weight:700;color:var(--green);margin-top:6px}
+
+/* HISTORIQUE */
+.hist-hero{background:var(--blue);padding:24px 20px 32px}
+.hist-hero h2{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.hist-hero p{font-size:13px;color:rgba(255,255,255,.75);margin-top:4px}
+.hist-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 12px 0}
+.hstat{background:#fff;border-radius:var(--r);padding:12px;box-shadow:var(--sh);text-align:center}
+.hstat-n{font-size:24px;font-weight:800;color:var(--blue)}
+.hstat-l{font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.hist-list{margin:12px 12px 0}
+.hist-item{background:#fff;border-radius:var(--r);box-shadow:var(--sh);margin-bottom:8px;overflow:hidden}
+.hist-hdr{padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.hist-hdr:active{background:var(--grey-light)}
+.hist-immat{font-size:14px;font-weight:700;color:var(--dark)}
+.hist-meta{font-size:11px;color:var(--grey);margin-top:2px}
+.hist-right{margin-left:auto;display:flex;gap:6px;align-items:center}
+.hist-body{display:none;border-top:1px solid var(--grey-border);padding:12px 14px}
+.hist-body.open{display:block}
+.hist-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px}
+.hist-row span:first-child{color:var(--grey)}
+.hist-row span:last-child{font-weight:600;color:var(--dark)}
+.hist-miss-title{font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 4px}
+.hist-miss-item{font-size:12px;color:var(--dark);padding:3px 0;border-bottom:1px solid var(--grey-border)}
+.hist-miss-item:last-child{border-bottom:none}
+.hist-actions{display:flex;gap:8px;margin-top:10px}
+.hbtn{flex:1;padding:10px;border-radius:var(--rs);border:none;font-size:12px;font-weight:700;cursor:pointer}
+.hbtn-pdf{background:var(--blue);color:#fff}
+.hbtn-del{background:var(--red-light);color:var(--red)}
+.empty-state{text-align:center;padding:48px 24px;color:var(--grey)}
+.empty-state .emo{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+.loading{text-align:center;padding:32px;color:var(--grey);font-size:13px}
+.spinner{width:24px;height:24px;border:2px solid var(--grey-border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--grey-border);display:flex;padding:8px 0 calc(var(--sab) + 8px);z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px}
+.nav-btn .ni{font-size:22px;line-height:1}
+.nav-btn .nl{font-size:9px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.05em}
+.nav-btn.active .nl{color:var(--blue)}
+
+/* TOAST */
+.toast{position:fixed;top:calc(var(--sat) + 70px);left:50%;transform:translateX(-50%) translateY(-20px);background:var(--dark);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* SAVED BADGE */
+.saved-badge{display:inline-flex;align-items:center;gap:4px;background:var(--green-light);color:var(--green);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="topbar">
+  <div class="topbar-logo"><span>FFSS</span></div>
+  <div class="topbar-info">
+    <div class="topbar-title">VPSP Check</div>
+    <div class="topbar-sub" id="tsub">G-2010-C-009</div>
+  </div>
+  <div class="topbar-prog" id="tprog">0 %</div>
+</div>
+<div class="prog-strip"><div class="prog-fill" id="pfill" style="width:0%"></div></div>
+
+<div class="scroll-area" id="sarea">
+
+  <!-- SETUP -->
+  <div class="screen active" id="screen-setup">
+    <div class="setup-hero">
+      <h2>Nouvelle vérification</h2>
+      <p>Infos du véhicule et de l'intervention</p>
+    </div>
+    <div class="setup-card">
+      <div class="fg"><label>Association / Département</label><input id="f-assoc" type="text" placeholder="ex. AVSS FFSS78"/></div>
+      <div class="f2">
+        <div class="fg"><label>Immatriculation</label><input id="f-immat" type="text" placeholder="AB-123-CD" style="text-transform:uppercase"/></div>
+        <div class="fg"><label>N° interne</label><input id="f-num" type="text" placeholder="VP-01"/></div>
+      </div>
+      <div class="f2">
+        <div class="fg"><label>Date</label><input id="f-date" type="date"/></div>
+        <div class="fg"><label>Heure</label><input id="f-heure" type="time"/></div>
+      </div>
+      <div class="fg"><label>Vérificateur</label><input id="f-verif" type="text" placeholder="Nom Prénom"/></div>
+      <div class="fg"><label>Mission / Événement</label><input id="f-mission" type="text" placeholder="ex. DPS Stade"/></div>
+      <button class="btn-start" onclick="startVerif()">Commencer la vérification →</button>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>OK = Conforme</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>N/A = Non applicable</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>MANQ = Manquant</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="screen" id="screen-check">
+    <div id="ch-list"></div>
+  </div>
+
+  <!-- BILAN -->
+  <div class="screen" id="screen-bilan">
+    <div class="bil-hero">
+      <h2>Bilan</h2>
+      <p id="bil-meta"></p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card s-ok"><div class="stat-num" id="s-ok">0</div><div class="stat-lbl">Conformes</div></div>
+      <div class="stat-card s-na"><div class="stat-num" id="s-na">0</div><div class="stat-lbl">N/A</div></div>
+      <div class="stat-card s-miss"><div class="stat-num" id="s-miss">0</div><div class="stat-lbl">Manquants</div></div>
+    </div>
+    <div class="bil-sec" id="miss-sec"></div>
+    <div class="bil-sec">
+      <h3>Observations générales</h3>
+      <div class="obs-gbox"><textarea id="obs-global" placeholder="Notes, suites à donner..." rows="4"></textarea></div>
+    </div>
+    <div class="bil-sec">
+      <h3>Signatures</h3>
+      <div class="sig-grid">
+        <div class="sig-box">
+          <div class="sig-lbl">Vérificateur <button class="sig-clr" onclick="clrSig('sig1')">Effacer</button></div>
+          <canvas class="sig-cv" id="sig1" width="200" height="80"></canvas>
+        </div>
+        <div class="sig-box">
+          <div class="sig-lbl">Chef d'équipe <button class="sig-clr" onclick="clrSig('sig2')">Effacer</button></div>
+          <canvas class="sig-cv" id="sig2" width="200" height="80"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="act-btns">
+      <button class="btn-act btn-save" id="btn-save" onclick="saveFiche()">💾 Enregistrer sur le serveur</button>
+      <button class="btn-act btn-pdf" onclick="exportPDF(null)">📄 Exporter en PDF</button>
+      <button class="btn-act btn-email" onclick="sendEmail()">✉️ Envoyer par email</button>
+      <button class="btn-act btn-reset" onclick="resetAll()">Nouvelle vérification</button>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div class="screen" id="screen-hist">
+    <div class="hist-hero">
+      <h2>Historique</h2>
+      <p>Fiches enregistrées sur le serveur</p>
+    </div>
+    <div class="hist-stats" id="hstats"></div>
+    <div class="hist-list" id="hlist"><div class="loading"><div class="spinner"></div>Chargement...</div></div>
+  </div>
+
+</div><!-- scroll-area -->
+
+<div class="bottom-nav">
+  <div class="nav-btn active" id="nav-setup" onclick="goScreen('setup')">
+    <div class="ni">📋</div><div class="nl">Infos</div>
+  </div>
+  <div class="nav-btn" id="nav-check" onclick="goScreen('check')">
+    <div class="ni">✅</div><div class="nl">Contrôle</div>
+  </div>
+  <div class="nav-btn" id="nav-bilan" onclick="goScreen('bilan')">
+    <div class="ni">📊</div><div class="nl">Bilan</div>
+  </div>
+  <div class="nav-btn" id="nav-hist" onclick="goScreen('hist');loadHist()">
+    <div class="ni">🗂️</div><div class="nl">Historique</div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════ DATA
+const CHAPTERS=[
+  {code:"A",title:"Cabine",items:[
+    {ref:"A001",name:"Gilet Haute-Visibilité FFSS",qty:"1 / intervenant",opt:false},
+    {ref:"A002",name:"Marteau brise-vitre",qty:"1",opt:false},
+    {ref:"A003",name:"Coupe-ceinture",qty:"1",opt:false},
+    {ref:"A004",name:"Carnet de désinfection",qty:"1",opt:false},
+    {ref:"A005",name:"Radio hertzienne (mobile ou fixe)",qty:"1",opt:false},
+    {ref:"A006",name:"Radio LTE",qty:"Optionnel",opt:true},
+    {ref:"A007",name:"Accès réseau téléphonique public",qty:"1 moyen",opt:false},
+    {ref:"A008",name:"Support téléphone",qty:"Optionnel",opt:true},
+    {ref:"A009",name:"GPS",qty:"Optionnel",opt:true},
+    {ref:"A013",name:"Carnet de bord",qty:"Recommandé",opt:true},
+  ]},
+  {code:"A1",title:"Lot administratif",items:[
+    {ref:"A101",name:"Certificat d'immatriculation",qty:"1",opt:false},
+    {ref:"A102",name:"Certificat d'assurance ou copie",qty:"1",opt:false},
+    {ref:"A103",name:"Contrôle technique",qty:"1",opt:false},
+    {ref:"A104",name:"Constat amiable",qty:"2",opt:false},
+    {ref:"A105",name:"Convention réseau secours / tripartite",qty:"Si applicable",opt:true},
+  ]},
+  {code:"A2",title:"Lot opérationnel",items:[
+    {ref:"A201",name:"Inventaire VPSP avec emplacement matériel",qty:"1",opt:false},
+    {ref:"A202",name:"Fiche bilan FFSS-D-2022-A-004",qty:"25",opt:false},
+    {ref:"A203",name:"Détecteur CO (agrément A : obligatoire)",qty:"1",opt:false},
+  ]},
+  {code:"B",title:"Lot de bord et sécurité",items:[
+    {ref:"B001",name:"Sac à lancer / corde 10 m min.",qty:"1",opt:false},
+    {ref:"B002",name:"Pelle et balayette",qty:"1",opt:false},
+    {ref:"B003",name:"Projecteur et piles",qty:"1",opt:false},
+    {ref:"B004",name:"Cônes de Lübeck",qty:"6",opt:false},
+    {ref:"B006",name:"Ruban de balisage",qty:"1 rouleau",opt:false},
+    {ref:"B007",name:"Triangle de pré-signalisation",qty:"2",opt:false},
+    {ref:"B008",name:"Extincteur ABC",qty:"1",opt:false},
+    {ref:"B009",name:"Cric et roue de secours",qty:"1",opt:false},
+    {ref:"B010",name:"Kit dépannage (huile, liquide refroid.)",qty:"Recommandé",opt:true},
+    {ref:"B011",name:"Câble de démarrage",qty:"Recommandé",opt:true},
+    {ref:"B012",name:"Bouée-tube",qty:"Recommandé",opt:true},
+    {ref:"B014",name:"Couverture anti-feu",qty:"Recommandé",opt:true},
+  ]},
+  {code:"B1",title:"Trousse à outils",items:[
+    {ref:"B101",name:"Petite pince / pied de biche",qty:"1",opt:false},
+    {ref:"B102",name:"Clé universelle (triangle, carré...)",qty:"1",opt:false},
+    {ref:"B103",name:"Tournevis / clé Allen / pince multiprise",qty:"Optionnel",opt:true},
+  ]},
+  {code:"C",title:"Matériel de brancardage",items:[
+    {ref:"C001",name:"Brancard + support + sangles (EN 1865)",qty:"1",opt:false},
+    {ref:"C002",name:"Matelas à dépression + sangles",qty:"1",opt:false},
+    {ref:"C002b",name:"Pompe à dépression",qty:"1",opt:false},
+    {ref:"C003",name:"Chaise portoir + sangles",qty:"1 + 2 sangles",opt:false},
+    {ref:"C004",name:"Portoir souple",qty:"1",opt:false},
+    {ref:"C005",name:"Plan dur",qty:"1",opt:false},
+    {ref:"C005b",name:"Immobilisateur de tête",qty:"1",opt:false},
+    {ref:"C005t",name:"Sangle araignée",qty:"1",opt:false},
+    {ref:"C006",name:"Brancard cuillère + sangles",qty:"1",opt:false},
+    {ref:"C007",name:"Couverture bactériostatique",qty:"1",opt:false},
+  ]},
+  {code:"C1",title:"Lot réanimation et oxygène",items:[
+    {ref:"C101",name:"Bouteille O₂ fixe 1000 l min.",qty:"1",opt:false},
+    {ref:"C102",name:"BAVU adulte",qty:"1",opt:false},
+    {ref:"C103",name:"BAVU enfant",qty:"1",opt:false},
+    {ref:"C104",name:"BAVU nourrisson",qty:"1",opt:false},
+    {ref:"C105",name:"Canules 4 tailles min. (00,1,2,4)",qty:"1 jeu",opt:false},
+    {ref:"C106",name:"Aspirateur électrique à mucosités",qty:"1",opt:false},
+    {ref:"C106b",name:"Kit aspirateur (poche, tuyau, sonde CH26)",qty:"2",opt:false},
+    {ref:"C112",name:"DAE/DSA + électrodes adulte",qty:"1",opt:false},
+    {ref:"C112b",name:"Kit prépa. torse (rasoirs, ciseaux, essuyage)",qty:"1",opt:false},
+    {ref:"C113",name:"Masque HC adulte",qty:"2",opt:false},
+    {ref:"C114",name:"Masque MC adulte",qty:"2",opt:false},
+    {ref:"C115",name:"Lunettes O₂ adulte",qty:"2",opt:false},
+    {ref:"C116",name:"Masque HC enfant",qty:"2",opt:false},
+    {ref:"C117",name:"Masque MC enfant",qty:"2",opt:false},
+    {ref:"C118",name:"Lunettes O₂ enfant",qty:"2",opt:false},
+    {ref:"C119",name:"Électrodes adulte de réserve",qty:"Recommandé",opt:true},
+    {ref:"C120",name:"Électrodes pédiatriques",qty:"Recommandé",opt:true},
+  ]},
+  {code:"C2",title:"Kit bilan transportable",items:[
+    {ref:"C201",name:"Tensiomètre manuel + brassards 10-66 cm",qty:"1",opt:false},
+    {ref:"C202",name:"Oxymètre (EN ISO 80601-2-61)",qty:"1",opt:false},
+    {ref:"C203",name:"Stéthoscope",qty:"1",opt:false},
+    {ref:"C204",name:"Thermomètre",qty:"1",opt:false},
+    {ref:"C205",name:"Lecteur de glycémie + bandelettes",qty:"1 + 20",opt:false},
+    {ref:"C206",name:"Autopiqueur",qty:"20",opt:false},
+  ]},
+  {code:"C3",title:"Hémorragies",items:[
+    {ref:"C301",name:"Garrot tourniquet",qty:"2",opt:false},
+    {ref:"C302",name:"Pansement compressif / israélien",qty:"2",opt:false},
+    {ref:"C303",name:"Pansement absorbant stérile 15×10 cm",qty:"2",opt:false},
+    {ref:"C305",name:"Champ de soin stérile 45×75 cm",qty:"2",opt:false},
+  ]},
+  {code:"C4",title:"Plaies",items:[
+    {ref:"C401",name:"Ciseaux Jesco",qty:"1 paire",opt:false},
+    {ref:"C402",name:"Ciseaux de soin",qty:"1 paire",opt:false},
+    {ref:"C403",name:"Pince à échardes",qty:"1",opt:false},
+    {ref:"C404",name:"Compresses stériles 7,5×7,5 cm",qty:"50",opt:false},
+    {ref:"C405",name:"Sparadrap",qty:"2",opt:false},
+    {ref:"C406",name:"Pansements toutes tailles",qty:"20",opt:false},
+    {ref:"C407",name:"Flacons sérum physiologique",qty:"20",opt:false},
+    {ref:"C408",name:"Bandes extensibles 3 tailles",qty:"10",opt:false},
+  ]},
+  {code:"C5",title:"Brûlures",items:[
+    {ref:"C501",name:"Lot compresses d'eau",qty:"1",opt:false},
+    {ref:"C502",name:"Gants stériles EN 455",qty:"3 paires",opt:false},
+    {ref:"C503",name:"Drap stérile",qty:"1",opt:false},
+    {ref:"C504",name:"Couverture isothermique",qty:"1",opt:false},
+  ]},
+  {code:"C6",title:"Membre sectionné",items:[
+    {ref:"C601",name:"Kit membre sectionné",qty:"1",opt:false},
+  ]},
+  {code:"C7",title:"Immobilisation",items:[
+    {ref:"C701",name:"Attelles membres 3 tailles min.",qty:"1 jeu",opt:false},
+    {ref:"C702",name:"Colliers cervicaux tous tailles",qty:"1 jeu",opt:false},
+    {ref:"C703",name:"Attelle cervico-thoracique (ACT)",qty:"1",opt:false},
+    {ref:"C704",name:"Écharpes triangulaires",qty:"10",opt:false},
+    {ref:"C705",name:"Packs de froid UU",qty:"10",opt:false},
+    {ref:"C706",name:"Couvertures de survie",qty:"20",opt:false},
+    {ref:"C708",name:"Ceinture pelvienne",qty:"Optionnel",opt:true},
+  ]},
+  {code:"C8",title:"Hygiène",items:[
+    {ref:"C801",name:"Haricot ou sac vomitoire",qty:"5",opt:false},
+    {ref:"C803",name:"Bassin",qty:"1",opt:false},
+    {ref:"C804",name:"Urinal (verre interdit)",qty:"1",opt:false},
+    {ref:"C805",name:"Conteneur OPTC",qty:"1",opt:false},
+    {ref:"C806",name:"Sacs DASRI",qty:"10",opt:false},
+    {ref:"C807",name:"Sacs DAOM",qty:"10",opt:false},
+    {ref:"C808",name:"Boîte 100 gants non stériles (3 tailles)",qty:"1 de chaque",opt:false},
+    {ref:"C809",name:"Draps brancardage UU non stériles",qty:"5 min.",opt:false},
+    {ref:"C810",name:"Solution hydroalcoolique NF 500 ml",qty:"1",opt:false},
+    {ref:"C811",name:"Produit de surface NF 750 ml",qty:"1",opt:false},
+    {ref:"C812",name:"Papier absorbant",qty:"1 rouleau",opt:false},
+    {ref:"C011",name:"Sucre enveloppé",qty:"30",opt:false},
+    {ref:"C012",name:"Eau en bouteille 500 ml",qty:"6",opt:false},
+    {ref:"C013",name:"Gobelets",qty:"20",opt:false},
+    {ref:"C014",name:"Kit accouchement",qty:"1",opt:false},
+  ]},
+  {code:"C9",title:"EPI",items:[
+    {ref:"C901",name:"Casque protection + jugulaire jaune",qty:"1/intervenant",opt:false},
+    {ref:"C902",name:"Gants de manutention",qty:"2 paires min.",opt:false},
+    {ref:"C903",name:"Lunettes de protection",qty:"4 paires",opt:false},
+    {ref:"C906",name:"Masques chirurgicaux",qty:"20",opt:false},
+    {ref:"C907",name:"Masques FFP2 / KN95",qty:"8",opt:false},
+    {ref:"C908",name:"Surblouses UU",qty:"4",opt:false},
+    {ref:"C909",name:"Surchaussures",qty:"8",opt:false},
+    {ref:"C910",name:"Charlottes",qty:"8",opt:false},
+    {ref:"C911",name:"Kit AES",qty:"1",opt:false},
+  ]},
+  {code:"D1",title:"Sac O₂ portable",items:[
+    {ref:"D101",name:"Bouteille O₂ portable 1000 l",qty:"1",opt:false},
+    {ref:"D102",name:"BAVU adulte",qty:"1",opt:false},
+    {ref:"D103",name:"BAVU enfant",qty:"1",opt:false},
+    {ref:"D105",name:"Canules 4 tailles min.",qty:"1 jeu",opt:false},
+    {ref:"D106",name:"Aspirateur manuel + sonde",qty:"1",opt:false},
+    {ref:"D109",name:"Masque HC adulte",qty:"1",opt:false},
+    {ref:"D110",name:"Masque MC adulte",qty:"1",opt:false},
+    {ref:"D111",name:"Lunettes O₂ adulte",qty:"1",opt:false},
+    {ref:"D112",name:"Masque HC enfant",qty:"1",opt:false},
+    {ref:"D113",name:"Masque MC enfant",qty:"1",opt:false},
+  ]},
+  {code:"D2",title:"Sac prompt secours",items:[
+    {ref:"D201",name:"Fiche bilan",qty:"1",opt:false},
+    {ref:"D202",name:"Fiche intervention",qty:"1",opt:false},
+    {ref:"D203",name:"Refus de prise en charge",qty:"1",opt:false},
+    {ref:"D209",name:"Lunettes de protection",qty:"4 paires",opt:false},
+    {ref:"D210",name:"Masques chirurgicaux",qty:"4",opt:false},
+    {ref:"D212",name:"Conteneur OPTC",qty:"1",opt:false},
+    {ref:"D213",name:"Sacs DASRI",qty:"3",opt:false},
+    {ref:"D214",name:"SHA NF 100 ml",qty:"1",opt:false},
+    {ref:"D215",name:"Ruban de balisage",qty:"1 rouleau",opt:false},
+    {ref:"D216",name:"Lampe électrique + piles",qty:"1",opt:false},
+    {ref:"D217",name:"Ciseaux Jesco",qty:"1",opt:false},
+    {ref:"D218",name:"Tensiomètre manuel + brassards",qty:"1",opt:false},
+    {ref:"D219",name:"Stéthoscope",qty:"1",opt:false},
+    {ref:"D225",name:"Garrot tourniquet",qty:"1",opt:false},
+    {ref:"D226",name:"Pansement compressif / israélien",qty:"1",opt:false},
+    {ref:"D228",name:"Compresses stériles 10×10 cm",qty:"10",opt:false},
+    {ref:"D229",name:"Pansements tailles variées",qty:"10",opt:false},
+    {ref:"D232",name:"Sérum physiologique",qty:"10 flacons",opt:false},
+    {ref:"D236",name:"Écharpes triangulaires",qty:"2",opt:false},
+    {ref:"D237",name:"Colliers cervicaux tous âges",qty:"1 lot",opt:false},
+    {ref:"D238",name:"Poche de froid UU",qty:"2",opt:false},
+    {ref:"D239",name:"Couverture de survie UU",qty:"2",opt:false},
+    {ref:"D240",name:"Eau 500 ml",qty:"2 bouteilles",opt:false},
+    {ref:"D241",name:"Gobelets UU",qty:"2",opt:false},
+    {ref:"D242",name:"Sucres en sachet",qty:"5",opt:false},
+  ]},
+];
+
+// ═══════════════════════════════════════════════════════ STATE
+const S={};let meta={};let totalItems=0;let savedId=null;
+CHAPTERS.forEach(ch=>ch.items.forEach(it=>{S[it.ref]={status:null,obs:''};totalItems++;}));
+
+// ═══════════════════════════════════════════════════════ SCREENS
+function goScreen(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+n).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-'+n).classList.add('active');
+  document.getElementById('sarea').scrollTop=0;
+  if(n==='bilan') buildBilan();
+}
+
+// ═══════════════════════════════════════════════════════ SETUP
+function startVerif(){
+  const d=document.getElementById('f-date').value;
+  const h=document.getElementById('f-heure').value;
+  meta={
+    assoc:document.getElementById('f-assoc').value||'—',
+    immat:document.getElementById('f-immat').value.toUpperCase()||'—',
+    num:document.getElementById('f-num').value||'—',
+    date_verif:d?new Date(d).toLocaleDateString('fr-FR'):new Date().toLocaleDateString('fr-FR'),
+    heure:h||new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),
+    verif:document.getElementById('f-verif').value||'—',
+    mission:document.getElementById('f-mission').value||'—',
+  };
+  document.getElementById('tsub').textContent=meta.immat+' — '+meta.date_verif;
+  savedId=null;
+  document.getElementById('btn-save').textContent='💾 Enregistrer sur le serveur';
+  document.getElementById('btn-save').disabled=false;
+  buildChecklist();
+  goScreen('check');
+}
+
+// ═══════════════════════════════════════════════════════ CHECKLIST
+function buildChecklist(){
+  const c=document.getElementById('ch-list');c.innerHTML='';
+  CHAPTERS.forEach(ch=>{
+    const div=document.createElement('div');div.className='ch-item';
+    const mand=ch.items.filter(i=>!i.opt).length;
+    div.innerHTML=`
+      <div class="ch-hdr" onclick="toggleCh('${ch.code}')">
+        <div class="ch-code"><span>${ch.code}</span></div>
+        <div class="ch-info">
+          <div class="ch-title">${ch.title}</div>
+          <div class="ch-count">${ch.items.length} items · ${mand} obligatoires</div>
+        </div>
+        <div class="ch-right">
+          <span class="ch-badge b-ok" id="bok-${ch.code}" style="display:none">0 OK</span>
+          <span class="ch-badge b-miss" id="bmiss-${ch.code}" style="display:none">0 !</span>
+          <span class="ch-arr" id="arr-${ch.code}">▶</span>
+        </div>
+      </div>
+      <div class="ch-body" id="body-${ch.code}">
+        ${ch.items.map(it=>`
+          <div class="itw">
+            <div class="itr">
+              <span class="it-ref">${it.ref}</span>
+              <div class="it-txt">
+                <div class="it-name${it.opt?' opt':''}">${it.name}${it.opt?' ★':''}</div>
+                <div class="it-qty">${it.qty}</div>
+              </div>
+              <div class="ck-row">
+                <button class="ck ok" id="ok-${it.ref}" onclick="setSt('${it.ref}','ok','${ch.code}')">OK</button>
+                <button class="ck na" id="na-${it.ref}" onclick="setSt('${it.ref}','na','${ch.code}')">N/A</button>
+                <button class="ck miss" id="miss-${it.ref}" onclick="setSt('${it.ref}','miss','${ch.code}')">!</button>
+              </div>
+            </div>
+            <div class="obs-row" id="obsr-${it.ref}">
+              <input class="obs-inp" type="text" placeholder="Observation..." id="obs-${it.ref}" oninput="S['${it.ref}'].obs=this.value"/>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    c.appendChild(div);
+  });
+}
+
+function toggleCh(code){
+  document.getElementById('body-'+code).classList.toggle('open');
+  document.getElementById('arr-'+code).classList.toggle('open');
+}
+
+function setSt(ref,status,chCode){
+  S[ref].status=status;
+  ['ok','na','miss'].forEach(s=>{
+    document.getElementById(s+'-'+ref).classList.toggle('active',s===status);
+  });
+  const or=document.getElementById('obsr-'+ref);
+  or.classList.toggle('show',status==='miss');
+  if(status!=='miss'){S[ref].obs='';document.getElementById('obs-'+ref).value='';}
+  updProg();updBadge(chCode);
+}
+
+function updBadge(code){
+  const ch=CHAPTERS.find(c=>c.code===code);
+  let ok=0,miss=0;
+  ch.items.forEach(i=>{if(S[i.ref].status==='ok')ok++;if(S[i.ref].status==='miss')miss++;});
+  const bok=document.getElementById('bok-'+code),bm=document.getElementById('bmiss-'+code);
+  bok.style.display=ok?'':'none';bok.textContent=ok+' OK';
+  bm.style.display=miss?'':'none';bm.textContent=miss+' !';
+}
+
+function updProg(){
+  const checked=Object.values(S).filter(s=>s.status).length;
+  const pct=Math.round(checked/totalItems*100);
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('tprog').textContent=pct+' %';
+}
+
+// ═══════════════════════════════════════════════════════ BILAN
+function calcStats(){
+  let ok=0,na=0,miss=0;const missItems=[];
+  Object.keys(S).forEach(ref=>{
+    const s=S[ref].status;
+    if(s==='ok')ok++;else if(s==='na')na++;else if(s==='miss'){
+      miss++;
+      const it=CHAPTERS.flatMap(c=>c.items).find(i=>i.ref===ref);
+      if(it)missItems.push({ref,name:it.name,obs:S[ref].obs});
+    }
+  });
+  return{ok,na,miss,missItems};
+}
+
+function buildBilan(){
+  const{ok,na,miss,missItems}=calcStats();
+  document.getElementById('s-ok').textContent=ok;
+  document.getElementById('s-na').textContent=na;
+  document.getElementById('s-miss').textContent=miss;
+  document.getElementById('bil-meta').textContent=meta.immat+' · '+meta.date_verif+' · '+meta.verif;
+  const ms=document.getElementById('miss-sec');
+  if(missItems.length===0){
+    ms.innerHTML='<div class="all-ok"><div class="emo">✅</div><p>Aucun élément manquant — véhicule conforme</p></div>';
+  }else{
+    ms.innerHTML='<h3>Éléments manquants ('+missItems.length+')</h3><div class="miss-list">'+
+      missItems.map(m=>`<div class="miss-item"><span class="miss-ref">${m.ref}</span><div class="miss-name">${m.name}${m.obs?'<div class="miss-obs">→ '+m.obs+'</div>':''}</div></div>`).join('')+
+    '</div>';
+  }
+  setTimeout(()=>{initSig('sig1');initSig('sig2');},100);
+}
+
+// ═══════════════════════════════════════════════════════ SIGNATURES
+const sigS={};
+function initSig(id){
+  if(sigS[id])return;
+  const c=document.getElementById(id);if(!c)return;
+  const ctx=c.getContext('2d');
+  ctx.strokeStyle='#1D4ED8';ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';
+  let drawing=false;
+  function pos(e){const r=c.getBoundingClientRect();const src=e.touches?e.touches[0]:e;return{x:(src.clientX-r.left)*(c.width/r.width),y:(src.clientY-r.top)*(c.height/r.height)};}
+  c.addEventListener('pointerdown',e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();});
+  c.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();});
+  c.addEventListener('pointerup',()=>drawing=false);
+  c.addEventListener('pointercancel',()=>drawing=false);
+  sigS[id]=true;
+}
+function clrSig(id){const c=document.getElementById(id);if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+
+// ═══════════════════════════════════════════════════════ SAVE
+async function saveFiche(){
+  const btn=document.getElementById('btn-save');
+  btn.textContent='⏳ Enregistrement...';btn.disabled=true;
+  const{ok,na,miss}=calcStats();
+  const sig1=document.getElementById('sig1')?.toDataURL('image/png')||null;
+  const sig2=document.getElementById('sig2')?.toDataURL('image/png')||null;
+  const payload={
+    ...meta,
+    nb_ok:ok,nb_na:na,nb_miss:miss,
+    obs_global:document.getElementById('obs-global').value,
+    items_json:JSON.stringify(S),
+    sig1,sig2
+  };
+  try{
+    const r=await fetch('/api/fiches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(d.id){
+      savedId=d.id;
+      btn.innerHTML='<span class="saved-badge">✓ Enregistré — Fiche #'+d.id+'</span>';
+      toast('Fiche #'+d.id+' enregistrée ✓');
+    }else{btn.textContent='💾 Réessayer';btn.disabled=false;}
+  }catch(e){btn.textContent='⚠️ Erreur réseau — Réessayer';btn.disabled=false;toast('Erreur de connexion');}
+}
+
+// ═══════════════════════════════════════════════════════ PDF
+function exportPDF(ficheData){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const blue=[29,78,216],dark=[15,23,42],grey=[100,116,139],red=[220,38,38],green=[22,163,74],amber=[217,119,6];
+  const W=210,ML=12,MR=12,CW=W-ML-MR;
+  let y=0;
+  function chk(n){if(y+n>280){doc.addPage();y=10;}}
+
+  // Données source
+  const m=ficheData?ficheData:meta;
+  const items=ficheData?ficheData.items_json:S;
+
+  // Header
+  doc.setFillColor(...blue);doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(13);
+  doc.text('VEHICULE DE PREMIERS SECOURS A PERSONNE',ML,11);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  doc.text("Fiche de verification de l'armement — Ref. G-2010-C-009",ML,17);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);
+  doc.text('FFSS — Commission Nationale Operationnelle',W-MR,11,{align:'right'});
+  if(ficheData){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('Fiche #'+ficheData.id,W-MR,16,{align:'right'});}
+  y=34;
+
+  // Meta
+  doc.setFillColor(241,245,249);doc.roundedRect(ML,y,CW,34,2,2,'F');
+  const fields=[['ASSOCIATION',m.assoc],['IMMATRICULATION',m.immat],['N° INTERNE',m.num||m.num_interne||'—'],['DATE',m.date_verif],['HEURE',m.heure],['VERIFICATEUR',m.verif],['MISSION',m.mission]];
+  const col=CW/4;
+  fields.forEach(([k,v],i)=>{
+    const cx=ML+4+(i%4)*col,cy=y+6+Math.floor(i/4)*14;
+    doc.setTextColor(...grey);doc.setFontSize(6);doc.setFont('helvetica','bold');doc.text(k,cx,cy);
+    doc.setTextColor(...dark);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text(String(v||'—').substring(0,22),cx,cy+5);
+  });
+  y+=40;
+
+  // Stats
+  const nb_ok=ficheData?ficheData.nb_ok:calcStats().ok;
+  const nb_na=ficheData?ficheData.nb_na:calcStats().na;
+  const nb_miss=ficheData?ficheData.nb_miss:calcStats().miss;
+  const statW=CW/3;
+  [[String(nb_ok),'CONFORMES',[220,252,231],green],[String(nb_na),'N/A',[254,243,199],amber],[String(nb_miss),'MANQUANTS',[254,226,226],red]].forEach(([val,lbl,bg,col2],i)=>{
+    const sx=ML+i*statW;
+    doc.setFillColor(...bg);doc.roundedRect(sx,y,statW-2,18,2,2,'F');
+    doc.setTextColor(...col2);doc.setFontSize(16);doc.setFont('helvetica','bold');doc.text(val,sx+statW/2-1,y+10,{align:'center'});
+    doc.setFontSize(6);doc.text(lbl,sx+statW/2-1,y+16,{align:'center'});
+  });
+  y+=24;
+
+  // Items
+  CHAPTERS.forEach(ch=>{
+    chk(14);
+    doc.setFillColor(...blue);doc.roundedRect(ML,y,CW,7,1,1,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','bold');
+    doc.text(ch.code+'  —  '+ch.title.toUpperCase(),ML+3,y+5);
+    y+=9;
+    ch.items.forEach(it=>{
+      const st=items[it.ref]?.status||null;
+      chk(7);
+      const bg=st==='ok'?[220,252,231]:st==='miss'?[254,226,226]:st==='na'?[254,243,199]:[248,250,252];
+      doc.setFillColor(...bg);doc.rect(ML,y,CW,6,'F');
+      doc.setTextColor(...grey);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.text(it.ref,ML+2,y+4);
+      doc.setTextColor(...dark);doc.setFontSize(7.5);doc.text((it.name+(it.opt?' *':'')).substring(0,55),ML+18,y+4);
+      doc.setTextColor(...grey);doc.setFontSize(6);doc.text(it.qty,ML+CW-28,y+4);
+      const sl=st==='ok'?'OK':st==='na'?'N/A':st==='miss'?'MANQ':'—';
+      const sc=st==='ok'?green:st==='na'?amber:st==='miss'?red:grey;
+      doc.setTextColor(...sc);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.text(sl,ML+CW-4,y+4,{align:'right'});
+      if(st==='miss'&&items[it.ref]?.obs){y+=5;chk(5);doc.setTextColor(...grey);doc.setFont('helvetica','italic');doc.setFontSize(6.5);doc.text('  → '+items[it.ref].obs,ML+18,y+3);}
+      y+=6;
+    });
+    y+=2;
+  });
+
+  // Signatures
+  chk(40);y+=4;
+  doc.setFillColor(...blue);doc.rect(ML,y,CW,6,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','bold');doc.text('SIGNATURES',ML+3,y+4.5);
+  y+=8;
+  const sigW=CW/2-2;
+  const sig1src=ficheData?ficheData.sig1:document.getElementById('sig1')?.toDataURL('image/png');
+  const sig2src=ficheData?ficheData.sig2:document.getElementById('sig2')?.toDataURL('image/png');
+  [sig1src,sig2src].forEach((src,i)=>{
+    const sx=ML+i*(sigW+4);
+    doc.setFillColor(241,245,249);doc.roundedRect(sx,y,sigW,28,2,2,'F');
+    doc.setTextColor(...grey);doc.setFontSize(7);doc.setFont('helvetica','bold');
+    doc.text(i===0?'VERIFICATEUR':"CHEF D'EQUIPE",sx+3,y+5);
+    if(src&&src.length>100){try{doc.addImage(src,'PNG',sx+2,y+7,sigW-4,18);}catch(e){}}
+  });
+  y+=32;
+
+  // Footer
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);
+    doc.setFillColor(241,245,249);doc.rect(0,290,W,7,'F');
+    doc.setTextColor(...grey);doc.setFontSize(6);doc.setFont('helvetica','normal');
+    doc.text('FFSS G-2010-C-009 — '+(m.immat||'')+'  — '+(m.date_verif||''),ML,294.5);
+    doc.text('Page '+i+' / '+pages,W-MR,294.5,{align:'right'});
+  }
+
+  const fn='VPSP_'+(m.immat||'vehicule').replace(/\s/g,'_')+'_'+(m.date_verif||'').replace(/\//g,'-')+'.pdf';
+  doc.save(fn);
+  toast('PDF téléchargé ✓');
+}
+
+// ═══════════════════════════════════════════════════════ EMAIL
+function sendEmail(){
+  const{ok,na,miss,missItems}=calcStats();
+  const subj=encodeURIComponent('Vérification VPSP — '+meta.immat+' — '+meta.date_verif);
+  let body='FICHE DE VERIFICATION VPSP — G-2010-C-009\n==========================================\n\n';
+  body+='Association : '+meta.assoc+'\nImmatriculation : '+meta.immat+' | N° : '+meta.num+'\n';
+  body+='Date : '+meta.date_verif+' | Heure : '+meta.heure+'\nVérificateur : '+meta.verif+'\nMission : '+meta.mission+'\n\n';
+  body+='RÉSULTATS\n---------\nConformes : '+ok+'\nN/A : '+na+'\nManquants : '+miss+'\n\n';
+  if(missItems.length){body+='ÉLÉMENTS MANQUANTS\n------------------\n';missItems.forEach(m=>body+='• '+m.ref+' — '+m.name+(m.obs?' ('+m.obs+')':'')+'\n');body+='\n';}
+  const og=document.getElementById('obs-global').value;
+  if(og)body+='OBSERVATIONS\n------------\n'+og+'\n\n';
+  body+='--\nFFSS G-2010-C-009 — Commission Nationale Opérationnelle';
+  window.location.href='mailto:?subject='+subj+'&body='+encodeURIComponent(body);
+  toast('Client email ouvert ✓');
+}
+
+// ═══════════════════════════════════════════════════════ HISTORIQUE
+async function loadHist(){
+  const hlist=document.getElementById('hlist');
+  const hstats=document.getElementById('hstats');
+  hlist.innerHTML='<div class="loading"><div class="spinner"></div>Chargement...</div>';
+  try{
+    const[fiches,stats]=await Promise.all([fetch('/api/fiches').then(r=>r.json()),fetch('/api/stats').then(r=>r.json())]);
+    // Stats
+    hstats.innerHTML=`
+      <div class="hstat"><div class="hstat-n">${stats.total}</div><div class="hstat-l">Fiches totales</div></div>
+      <div class="hstat"><div class="hstat-n">${stats.lastWeek}</div><div class="hstat-l">Cette semaine</div></div>`;
+    // List
+    if(!fiches.length){hlist.innerHTML='<div class="empty-state"><div class="emo">📭</div><p>Aucune fiche enregistrée</p></div>';return;}
+    hlist.innerHTML=fiches.map(f=>`
+      <div class="hist-item">
+        <div class="hist-hdr" onclick="toggleHist(${f.id})">
+          <div>
+            <div class="hist-immat">${f.immat||'—'} <span style="font-weight:400;font-size:12px;color:var(--grey)">#${f.id}</span></div>
+            <div class="hist-meta">${f.date_verif} · ${f.verif||'—'} · ${f.mission||'—'}</div>
+          </div>
+          <div class="hist-right">
+            ${f.nb_miss>0?`<span class="ch-badge b-miss">${f.nb_miss} !</span>`:''}
+            <span class="ch-badge b-ok">${f.nb_ok} OK</span>
+            <span class="ch-arr" id="harr-${f.id}">▶</span>
+          </div>
+        </div>
+        <div class="hist-body" id="hbody-${f.id}">
+          <div class="loading"><div class="spinner"></div>Chargement détail...</div>
+        </div>
+      </div>`).join('');
+  }catch(e){hlist.innerHTML='<div class="empty-state"><div class="emo">⚠️</div><p>Erreur de connexion au serveur</p></div>';}
+}
+
+async function toggleHist(id){
+  const body=document.getElementById('hbody-'+id);
+  const arr=document.getElementById('harr-'+id);
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  arr.classList.toggle('open',!isOpen);
+  if(!isOpen&&body.querySelector('.loading')){
+    try{
+      const f=await fetch('/api/fiches/'+id).then(r=>r.json());
+      const missItems=[];
+      if(f.items_json){Object.keys(f.items_json).forEach(ref=>{if(f.items_json[ref].status==='miss'){const it=CHAPTERS.flatMap(c=>c.items).find(i=>i.ref===ref);if(it)missItems.push({ref,name:it.name,obs:f.items_json[ref].obs});}});}
+      body.innerHTML=`
+        <div class="hist-row"><span>Association</span><span>${f.assoc||'—'}</span></div>
+        <div class="hist-row"><span>N° interne</span><span>${f.num||'—'}</span></div>
+        <div class="hist-row"><span>Heure</span><span>${f.heure||'—'}</span></div>
+        <div class="hist-row"><span>Conformes</span><span style="color:var(--green)">${f.nb_ok}</span></div>
+        <div class="hist-row"><span>N/A</span><span style="color:var(--amber)">${f.nb_na}</span></div>
+        <div class="hist-row"><span>Manquants</span><span style="color:var(--red)">${f.nb_miss}</span></div>
+        ${f.obs_global?`<div class="hist-row"><span>Obs.</span><span>${f.obs_global}</span></div>`:''}
+        ${missItems.length?'<div class="hist-miss-title">Éléments manquants</div><div class="miss-list">'+missItems.map(m=>`<div class="hist-miss-item">${m.ref} — ${m.name}${m.obs?' ('+m.obs+')':''}</div>`).join('')+'</div>':''}
+        <div class="hist-actions">
+          <button class="hbtn hbtn-pdf" onclick="regenPDF(${id})">📄 PDF</button>
+          <button class="hbtn hbtn-del" onclick="delFiche(${id})">🗑 Supprimer</button>
+        </div>`;
+      body._data=f;
+    }catch(e){body.innerHTML='<p style="color:var(--red);padding:8px">Erreur chargement</p>';}
+  }
+}
+
+async function regenPDF(id){
+  const body=document.getElementById('hbody-'+id);
+  if(body._data)exportPDF(body._data);
+  else{
+    const f=await fetch('/api/fiches/'+id).then(r=>r.json());
+    body._data=f;exportPDF(f);
+  }
+}
+
+async function delFiche(id){
+  if(!confirm('Supprimer la fiche #'+id+' ?'))return;
+  await fetch('/api/fiches/'+id,{method:'DELETE'});
+  toast('Fiche #'+id+' supprimée');
+  loadHist();
+}
+
+// ═══════════════════════════════════════════════════════ RESET
+function resetAll(){
+  if(!confirm('Réinitialiser toutes les données ?'))return;
+  CHAPTERS.forEach(ch=>ch.items.forEach(it=>{S[it.ref]={status:null,obs:''}}));
+  document.getElementById('obs-global').value='';
+  clrSig('sig1');clrSig('sig2');
+  sigS['sig1']=false;sigS['sig2']=false;
+  savedId=null;updProg();goScreen('setup');
+}
+
+// ═══════════════════════════════════════════════════════ TOAST
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ═══════════════════════════════════════════════════════ INIT
+document.getElementById('f-date').valueAsDate=new Date();
+document.getElementById('f-heure').value=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "VPSP Check — FFSS",
+  "short_name": "VPSP Check",
+  "description": "Vérification armement VPSP — FFSS G-2010-C-009",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1D4ED8",
+  "theme_color": "#1D4ED8",
+  "orientation": "portrait",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
